@@ -638,7 +638,13 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         log.warn(msg.toString());
                         exception = e;
                         if (this.defaultMQProducer.getRetryResponseCodes().contains(e.getResponseCode())) {
-                            continue;
+                            this.mQClientFactory.updateTopicRouteInfoByResponse(e, msg.getTopic());
+                            topicPublishInfo = this.tryToFindTopicPublishInfo(msg.getTopic());
+                            if (topicPublishInfo != null && topicPublishInfo.ok()) {
+                                continue;
+                            } else {
+                                throw e;
+                            }
                         } else {
                             if (sendResult != null) {
                                 return sendResult;
