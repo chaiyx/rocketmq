@@ -237,8 +237,7 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
     @Override
     public SubscriptionGroupConfig examineSubscriptionGroupConfig(String addr, String group)
         throws InterruptedException, RemotingException, MQClientException, MQBrokerException {
-        SubscriptionGroupWrapper wrapper = this.mqClientInstance.getMQClientAPIImpl().getAllSubscriptionGroup(addr, timeoutMillis);
-        return wrapper.getSubscriptionGroupTable().get(group);
+        return this.mqClientInstance.getMQClientAPIImpl().getSubscriptionGroup(addr, group, timeoutMillis);
     }
 
     @Override

@@ -26,6 +26,7 @@ import org.apache.rocketmq.broker.client.ClientChannelInfo;
 import org.apache.rocketmq.broker.client.ConsumerGroupInfo;
 import org.apache.rocketmq.broker.filter.ConsumerFilterData;
 import org.apache.rocketmq.broker.filter.ExpressionMessageFilter;
+import org.apache.rocketmq.common.protocol.header.GetSubscriptionConfigRequestHeader;
 import org.apache.rocketmq.common.topic.TopicValidator;
 import org.apache.rocketmq.broker.transaction.queue.TransactionalMessageUtil;
 import org.apache.rocketmq.common.AclConfig;
@@ -179,6 +180,8 @@ public class AdminBrokerProcessor extends AsyncNettyRequestProcessor implements 
                 return this.updateAndCreateSubscriptionGroup(ctx, request);
             case RequestCode.GET_ALL_SUBSCRIPTIONGROUP_CONFIG:
                 return this.getAllSubscriptionGroup(ctx, request);
+            case RequestCode.GET_SUBSCRIPTIONGROUP_CONFIG:
+                return this.getSubscriptionGroup(ctx, request);
             case RequestCode.DELETE_SUBSCRIPTIONGROUP:
                 return this.deleteSubscriptionGroup(ctx, request);
             case RequestCode.GET_TOPIC_STATS_INFO:
@@ -701,6 +704,36 @@ public class AdminBrokerProcessor extends AsyncNettyRequestProcessor implements 
             log.error("No subscription group in this broker, client:{} ", ctx.channel().remoteAddress());
             response.setCode(ResponseCode.SYSTEM_ERROR);
             response.setRemark("No subscription group in this broker");
+            return response;
+        }
+
+        response.setCode(ResponseCode.SUCCESS);
+        response.setRemark(null);
+
+        return response;
+    }
+
+    private RemotingCommand getSubscriptionGroup(ChannelHandlerContext ctx,
+        RemotingCommand request) throws RemotingCommandException {
+        final RemotingCommand response = RemotingCommand.createResponseCommand(null);
+        final GetSubscriptionConfigRequestHeader requestHeader =
+            (GetSubscriptionConfigRequestHeader) request.decodeCommandCustomHeader(GetSubscriptionConfigRequestHeader.class);
+        String group = requestHeader.getGroup();
+        SubscriptionGroupConfig subscriptionGroupConfig = this.brokerController.getSubscriptionGroupManager().findSubscriptionGroupConfig(group);
+        if (subscriptionGroupConfig != null) {
+            try {
+                response.setBody(RemotingSerializable.toJson(subscriptionGroupConfig, false).getBytes(MixAll.DEFAULT_CHARSET));
+            } catch (UnsupportedEncodingException e) {
+                log.error("UnsupportedEncodingException, ", e);
+
+                response.setCode(ResponseCode.SYSTEM_ERROR);
+                response.setRemark("UnsupportedEncodingException " + e);
+                return response;
+            }
+        } else {
+            log.error("No subscription group in this broker, client:{} , group:{}", ctx.channel().remoteAddress(), group);
+            response.setCode(ResponseCode.SUBSCRIPTION_NOT_EXIST);
+            response.setRemark("No subscription group " + group + " in this broker");
             return response;
         }
 
