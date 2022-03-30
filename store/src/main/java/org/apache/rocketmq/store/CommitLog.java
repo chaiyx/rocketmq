@@ -78,7 +78,7 @@ public class CommitLog {
 
     private volatile Set<String> fullStorePaths = Collections.emptySet();
 
-    private final MultiDispatch multiDispatch;
+    protected final MultiDispatch multiDispatch;
     private final FlushDiskWatcher flushDiskWatcher;
 
     public CommitLog(final DefaultMessageStore defaultMessageStore) {
@@ -650,11 +650,13 @@ public class CommitLog {
         }
 
         PutMessageThreadLocal putMessageThreadLocal = this.putMessageThreadLocal.get();
-        PutMessageResult encodeResult = putMessageThreadLocal.getEncoder().encode(msg);
-        if (encodeResult != null) {
-            return CompletableFuture.completedFuture(encodeResult);
+        if (!multiDispatch.isMultiDispatchMsg(msg)) {
+            PutMessageResult encodeResult = putMessageThreadLocal.getEncoder().encode(msg);
+            if (encodeResult != null) {
+                return CompletableFuture.completedFuture(encodeResult);
+            }
+            msg.setEncodedBuff(putMessageThreadLocal.getEncoder().encoderBuffer);
         }
-        msg.setEncodedBuff(putMessageThreadLocal.getEncoder().encoderBuffer);
         PutMessageContext putMessageContext = new PutMessageContext(generateKey(putMessageThreadLocal.getKeyBuilder(), msg));
 
         long elapsedTimeInLock = 0;
